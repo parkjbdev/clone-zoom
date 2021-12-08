@@ -73,45 +73,44 @@ async function getRandomNickname() {
 }
 
 socketServer.on("connection", (user: Socket & UserProperty) => {
-  user["nickname"] = user.id
-  // axios.get("https://nickname.hwanmoo.kr/?format=json")
-  //   .then(res => user.nickname = res.data.words[0])
-  // getRandomNickname()
-  updateRooms()
-  user.onAny(event => {
-    console.log(`Socket Event: ${event} from ${user.nickname}`)
-  })
-  user.on("enter_room", (roomName, done) => {
-    user.join(roomName)
-    done(roomName, countUsers(roomName))
-    user.to(roomName).emit("welcome", user.nickname, countUsers(roomName))
-    updateRooms()
-  })
-  // user.on("get_usercount", )
-  user.on("new_message", (msg, cb) => {
-    const payload = {
-      username: user.nickname,
-      message: msg.message
-    }
-    user.to(msg.destination_room).emit("new_message", payload)
-    cb()
-  })
-  user.on("set_nickname", (nickname, cb) => {
-    const prevNickname = user.nickname
-    user.nickname = nickname
-    user.to(Array.from(user.rooms)).emit("change_nickname", prevNickname, nickname)
-    cb()
-  })
-  user.on("disconnecting", reason => {
-    user.rooms.forEach(room => {
-      user.to(room).emit("bye", user.nickname)
-      user.to(room).emit("usercount_change", countUsers(room) - 1)
-    }
-  )
-  })
-  user.on("disconnect", () => {
-    updateRooms()
-  })
+  getRandomNickname()
+    .then(nickname => {
+      user.nickname = nickname
+      updateRooms()
+      user.onAny(event => {
+        console.log(`Socket Event: ${event} from ${user.nickname}`)
+      })
+      user.emit("set_username", nickname)
+      user.on("enter_room", (roomName, done) => {
+        user.join(roomName)
+        done(roomName, countUsers(roomName))
+        user.to(roomName).emit("welcome", user.nickname, countUsers(roomName))
+        updateRooms()
+      })
+      user.on("new_message", (msg, cb) => {
+        const payload = {
+          username: user.nickname,
+          message: msg.message
+        }
+        user.to(msg.destination_room).emit("new_message", payload)
+        cb()
+      })
+      user.on("set_nickname", (nickname, cb) => {
+        const prevNickname = user.nickname
+        user.nickname = nickname
+        user.to(Array.from(user.rooms)).emit("change_nickname", prevNickname, nickname)
+        cb()
+      })
+      user.on("disconnecting", reason => {
+        user.rooms.forEach(room => {
+          user.to(room).emit("bye", user.nickname)
+          user.to(room).emit("usercount_change", countUsers(room) - 1)
+        })
+      })
+      user.on("disconnect", () => {
+        updateRooms()
+      })
+    })
 })
 
 httpServer.listen(3000, handleListen)

@@ -73,9 +73,9 @@ room.querySelector("#name").addEventListener("submit", (event) => {
   changeNickName(userName, input.value)
 })
 
-socket.on("connect", () => {
-  room.querySelector("#name > input").value = socket.id
-  userName = socket.id
+socket.on("set_username", nickname => {
+  room.querySelector("#name > input").value = nickname.toString()
+  userName = nickname.toString()
 })
 socket.on("welcome", (nickname, count) => {
   addNewUserJoinMessage(nickname)

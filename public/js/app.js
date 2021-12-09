@@ -2,21 +2,52 @@ const socket = io();
 
 const welcome = document.getElementById("welcome")
 const room = document.getElementById("room")
+const nickname = room.querySelector("#nickname")
 
-let userName = ""
 let roomName = ""
 room.hidden = true
 
 welcome.querySelector("input").focus()
 
+// Nickname Settings
+const setNickname = (name) => {
+  socket.emit("set_nickname", name, () => {
+    nickname.innerText !== "" && addNickNameChangedMessage(nickname.innerText, name)
+    nickname.innerText = name
+  })
+}
+
+const nickname_change_button = document.getElementById("change_nickname")
+nickname_change_button.onclick = () => {
+  const newNickname = prompt("닉네임 변경")
+  setNickname(newNickname)
+}
+
+// Enter Room
 const showRoom = (roomName, userCount) => {
   welcome.hidden = true;
   room.hidden = false;
-  room.querySelector("input").focus()
-  addNewUserJoinMessage(userName)
   setRoomHeader(roomName, userCount)
 }
+const enterRoom = (roomName) => {
+  socket.emit("enter_room", roomName, showRoom);
+}
+welcome.querySelector("form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = welcome.querySelector("form > input");
+  enterRoom(input.value)
+});
 
+// Send Messages
+const setRoomHeader = (_roomName, userCount) => {
+  room.querySelector("h3").innerHTML = `방제: ${_roomName}<br/>접속한 인원: ${userCount}`
+  roomName = _roomName
+}
+const sendMessage = (msg) => {
+  socket.emit("new_message", msg, () => {
+    addMessage(`${nickname.innerText} (You): ${msg.message}`)
+  })
+}
 const addMessage = (arg) => {
   const ul = room.querySelector("ul")
   const li = document.createElement("li")
@@ -30,33 +61,6 @@ const addNewUserJoinMessage = (nickname) => {
 const addNickNameChangedMessage = (prev, current) => {
   addMessage(`${prev} changed nickname to ${current}`)
 }
-
-// Socket Related
-const changeNickName = (prev, current) => {
-  socket.emit("set_nickname", current, () => {
-    addNickNameChangedMessage(prev, current)
-    userName = current
-  })
-}
-const sendMessage = (msg) => {
-  socket.emit("new_message", msg, () => {
-    addMessage(`You: ${msg.message}`)
-  })
-}
-const enterRoom = (roomName) => {
-  socket.emit("enter_room", roomName, showRoom);
-}
-
-const setRoomHeader = (_roomName, userCount) => {
-  room.querySelector("h3").innerHTML = `방제: ${_roomName}<br/>접속한 인원: ${userCount}`
-  roomName = _roomName
-}
-
-welcome.querySelector("form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const input = welcome.querySelector("form > input");
-  enterRoom(input.value)
-});
 room.querySelector("#msg").addEventListener("submit", (event) => {
   event.preventDefault()
   const input = room.querySelector("#msg > input")
@@ -67,20 +71,13 @@ room.querySelector("#msg").addEventListener("submit", (event) => {
   sendMessage(msg)
   input.value = ""
 })
-room.querySelector("#name").addEventListener("submit", (event) => {
-  event.preventDefault()
-  const input = room.querySelector("#name > input")
-  changeNickName(userName, input.value)
-})
 
-socket.on("set_username", nickname => {
-  room.querySelector("#name > input").value = nickname.toString()
-  userName = nickname.toString()
-})
+// on Socket Events
 socket.on("welcome", (nickname, count) => {
   addNewUserJoinMessage(nickname)
   setRoomHeader(roomName, count)
 })
+socket.on("set_username", setNickname)
 socket.on("change_nickname", addNickNameChangedMessage)
 socket.on("usercount_change", (count) => setRoomHeader(roomName, count))
 socket.on("room_change", rooms => {
@@ -88,7 +85,10 @@ socket.on("room_change", rooms => {
   roomList.innerHTML = ""
   rooms.forEach(room => {
     const li = document.createElement("li")
-    li.innerText = room
+    const a = document.createElement("a")
+    a.innerText = room
+    a.onclick = () => enterRoom(room)
+    li.appendChild(a)
     roomList.append(li)
   })
 })

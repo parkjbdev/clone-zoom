@@ -2,6 +2,7 @@ import * as http from "http"
 import express from "express"
 import axios from "axios"
 import {Server as SocketIO, Socket} from "socket.io"
+import {instrument} from "@socket.io/admin-ui"
 import path from "path"
 
 const app = express()
@@ -13,41 +14,19 @@ const handleListen = () => console.log("Listening on port 3000")
 
 const httpServer = http.createServer(app)
 
-// const wsServer = new WebSocket.Server({server});
-// interface ExtendedWebSocket extends WebSocket {
-//   nickname: string
-// }
-// const sockets: ExtendedWebSocket[] = []
-//
-// wsServer.on("connection", /* server connected to client */(socket: ExtendedWebSocket) /* client socket */ => {
-//   sockets.push(socket)
-//   socket.nickname = "Anonymous"
-//   console.log("✔️ Connected to Client")
-//   socket.on("close", () => console.log("❌  Disconnected from Client"))
-//   socket.on("message", (_msg: Buffer) => {
-//     console.log("💬 Message from Client", _msg.toString())
-//     const msg: { type: string, payload: string } = JSON.parse(_msg.toString())
-//
-//     switch (msg.type) {
-//       case "new_message":
-//         sockets.forEach(_socket => _socket.send(`${socket.nickname}: ${msg.payload}`))
-//         break
-//       case "nickname":
-//         socket.nickname = msg.payload
-//         break
-//     }
-//   })
-// })
+const socketServer = new SocketIO(httpServer, {
+  cors: {
+    origin: ["https://admin.socket.io"],
+    credentials: true
+  }
+})
 
-const socketServer = new SocketIO(httpServer)
+instrument(socketServer, {
+  auth: false
+})
 
 interface UserProperty {
   nickname?: string
-}
-
-interface Message {
-  destination_room: string,
-  message: string
 }
 
 const publicRooms = () => {

@@ -1,6 +1,6 @@
 import * as http from "http"
 import express from "express"
-import axios from "axios"
+import axios, {AxiosResponse} from "axios"
 import {Server as SocketIO, Socket} from "socket.io"
 import {instrument} from "@socket.io/admin-ui"
 import path from "path"
@@ -46,20 +46,21 @@ const countUsers = (roomName: string) => {
   return socketServer.sockets.adapter.rooms.get(roomName)?.size || 0
 }
 
-async function getRandomNickname() {
+async function getRandomNickname():Promise<string> {
   return await axios.get("https://nickname.hwanmoo.kr/?format=json")
     .then(res => res.data.words[0])
 }
 
 socketServer.on("connection", (user: Socket & UserProperty) => {
   getRandomNickname()
-    .then(nickname => {
-      user.nickname = nickname
+    .then(nickname => user.nickname = nickname)
+    .catch(() => user.nickname = user.id)
+    .then(() => {
       updateRooms()
       user.onAny(event => {
         console.log(`Socket Event: ${event} from ${user.nickname}`)
       })
-      user.emit("set_username", nickname)
+      user.emit("set_username", user.nickname)
       user.on("enter_room", (roomName, done) => {
         user.join(roomName)
         done(roomName, countUsers(roomName))

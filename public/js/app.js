@@ -11,16 +11,18 @@ welcome.querySelector("input").focus()
 
 // Nickname Settings
 const setNickname = (name) => {
-  socket.emit("set_nickname", name, () => {
-    nickname.innerText !== "" && addNickNameChangedMessage(nickname.innerText, name)
-    nickname.innerText = name
-  })
+  nickname.innerText !== "" && addNickNameChangedMessage(nickname.innerText, name)
+  nickname.innerText = name
+}
+
+ const requestSetNickname = (name) => {
+  socket.emit("set_username", name, setNickname)
 }
 
 const nickname_change_button = document.getElementById("change_nickname")
 nickname_change_button.onclick = () => {
   const newNickname = prompt("닉네임 변경")
-  setNickname(newNickname)
+  requestSetNickname(newNickname)
 }
 
 // Enter Room
@@ -77,9 +79,9 @@ socket.on("welcome", (nickname, count) => {
   addNewUserJoinMessage(nickname)
   setRoomHeader(roomName, count)
 })
-socket.on("set_username", setNickname)
-socket.on("change_nickname", addNickNameChangedMessage)
-socket.on("usercount_change", (count) => setRoomHeader(roomName, count))
+socket.on("init_username", setNickname)
+socket.on("username_changed", addNickNameChangedMessage)
+socket.on("usercount_changed", (count) => setRoomHeader(roomName, count))
 socket.on("room_change", rooms => {
   const roomList = welcome.querySelector("ul")
   roomList.innerHTML = ""
